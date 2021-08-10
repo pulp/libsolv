@@ -1,0 +1,45 @@
+[build-system]
+requires = ["scikit-build-core"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "solv"
+description = "A free package dependency solver using a satisfiability algorithm."
+readme = {file = "README", content-type = "text/markdown"}
+license = "BSD-3-Clause"
+requires-python = ">=3.11"
+version = "0.7.39.post1"
+# dynamic = ["version"]
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C",
+    "Topic :: System :: Software Distribution",
+    "Topic :: System :: Systems Administration",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[tool.cibuildwheel]
+build = "cp3{11,12,13,14}-manylinux_*"
+archs = ["auto64"]  # add "aarch64" if running outside of CI
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+before-all = "dnf install -y make cmake zlib-devel bzip2-devel libxml2-devel xz-devel swig"
+before-build = "python -m pip install scikit-build-core"
+container-engine = "podman"
+test-command = "python -c 'import solv'"
+
+[tool.scikit-build]
+cmake.args = [
+    "-DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo",
+    "-DENABLE_PYTHON3:BOOL=ON",
+    "-DENABLE_COMPLEX_DEPS:BOOL=ON",
+    "-DENABLE_RPMMD:BOOL=ON",
+    "-DENABLE_STATIC:BOOL=ON",
+    "-DENABLE_STATIC_BINDINGS:BOOL=ON",
+    "-DWITH_LIBXML2:BOOL=ON",
+]
+# metadata.version.provider = "scikit_build_core.metadata.regex"
+# metadata.version.input = "VERSION"
+# metadata.version.regex = "(?P<value>.+)"

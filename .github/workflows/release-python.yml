@@ -1,0 +1,81 @@
+---
+name: Release to PyPI
+
+on: workflow_dispatch
+
+jobs:
+  build_sdist:
+    name: Build source package
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6.0.1
+
+    - name: Install/Upgrade dependencies
+      run: |
+        sudo apt install -y make cmake zlib1g-dev lbzip2 libxml2-dev lzma-dev swig
+        sudo apt install -y python3 python3-pip git
+        python3 -m pip install --upgrade pip build scikit-build-core
+
+    - name: Build Python sdist
+      run: python3 -m build --sdist
+
+    - name: Install and Test Python source package
+      run: |
+        pip install dist/*.tar.gz
+        # pytest --verbose --color=yes test/
+    # - name: Run tests
+    #   run: |
+    #     pip install pytest
+    #     pytest --verbose --color=yes test/
+
+    - uses: actions/upload-artifact@v6
+      with:
+        name: source
+        path: dist/*.tar.gz
+
+
+  build_bdist:
+    name: Build binary wheels
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v6.0.1
+
+    # setup Python for cibuildwheel
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Build wheels for CPython
+      uses: pypa/cibuildwheel@v3.4.1
+
+    - uses: actions/upload-artifact@v6
+      with:
+        name: ${{ matrix.arch }}
+        path: ./wheelhouse/*.whl
+
+
+  upload_pypi:
+    name: Publish packages to PyPI
+    # only publish packages once everything is successful
+    needs: [build_bdist, build_sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: pypa/gh-action-pypi-publish@v1.13.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          # To test: repository_url: https://test.pypi.org/legacy/
